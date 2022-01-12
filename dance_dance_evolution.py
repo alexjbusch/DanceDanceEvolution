@@ -4,7 +4,23 @@ import time
 from enum import IntEnum
 import numpy as np
 import math
+import keyboard
 
+
+
+
+
+""" TODO:
+            get minimum viable product working
+                cycle poses/pictures
+                music
+                present line
+                moving circles
+                timed motion
+                timed checking
+                late/early/good/great UI text
+
+"""
 
 
 ### global declarations ###
@@ -20,9 +36,15 @@ line_spec = mpDraw.DrawingSpec(thickness=1, color=(255,0,200))
 black_line_spec = mpDraw.DrawingSpec(thickness=1, color=(0,0,0))
 black_circle_spec = mpDraw.DrawingSpec(thickness=7, color=(0,0,0))
 
+window_name = "dance dance Evolution"
+cv2.namedWindow(window_name,cv2.WND_PROP_FULLSCREEN)
+cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN,
+                      cv2.WINDOW_FULLSCREEN)
+
+# points will be the list of points the ai detects on the player's body
 points = None
 
-# used to calculate framerate probably
+# used to calculate framerate
 cTime = 0
 pTime = 0
 
@@ -330,8 +352,34 @@ disco_pointing_down_left = Pose([
 disco_pointing_up_right = Pose([
     # right wrist below left shoulder
     SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.NOSE,  distance = 0, relative_position = "above"),
-    #
+    # right wrist right of right shoulder
     SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.RIGHT_SHOULDER,  distance = 0, relative_position = "right_of"),
+    # left wrist below left shoulder
+    SubPose(BodyPoint.LEFT_WRIST, BodyPoint.LEFT_SHOULDER,  distance = 0, relative_position = "below"),
+    #
+    SubPose(BodyPoint.LEFT_WRIST, BodyPoint.LEFT_ELBOW, BodyPoint.LEFT_SHOULDER, angle = 45, lower_angle_threshold = 20, upper_angle_threshold = 75),
+    ])
+
+disco_pointing_up_left = Pose([
+    # left wrist below left shoulder
+    SubPose(BodyPoint.LEFT_WRIST, BodyPoint.NOSE,  distance = 0, relative_position = "above"),
+    # left wrist left of left shoulder
+    SubPose(BodyPoint.LEFT_WRIST, BodyPoint.RIGHT_SHOULDER,  distance = 0, relative_position = "left_of"),
+    # left wrist below left shoulder
+    SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.RIGHT_SHOULDER,  distance = 0, relative_position = "below"),
+    #
+    SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.RIGHT_ELBOW, BodyPoint.RIGHT_SHOULDER, angle = 270, lower_angle_threshold = 20, upper_angle_threshold = 75),
+    ])
+
+disco_right_arm_extended = Pose([
+    # right wrist below nose
+    SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.NOSE,  distance = 0, relative_position = "below"),
+    SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.RIGHT_HIP,  distance = 0, relative_position = "above"),
+    SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.RIGHT_SHOULDER,  distance = 0, relative_position = "right_of"),
+    #
+    SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.RIGHT_ELBOW, BodyPoint.RIGHT_SHOULDER, angle = 0, lower_angle_threshold = 20, upper_angle_threshold = 20),
+    SubPose(BodyPoint.RIGHT_HIP, BodyPoint.RIGHT_SHOULDER, BodyPoint.RIGHT_ELBOW, angle = 90, lower_angle_threshold = 30, upper_angle_threshold = 20),
+
     ])
 
 ### main game loop ###
@@ -356,7 +404,7 @@ while playing:
     if points:
 
         #if YMCA[index].check():
-        if disco_pointing_up_right.check():
+        if disco_right_arm_extended.check():
             mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, black_circle_spec, black_line_spec)
             index += 1
         else:
@@ -384,14 +432,19 @@ while playing:
     game_window.fill(255)
 
     # paste the image of john travolta on the game window
-    game_window = paste("travolta_up_right.png" ,10,100, game_window, scaling = .5)
-
+    cv2.putText(game_window,"Coming next!",(0,35),cv2.FONT_HERSHEY_PLAIN,3, (0,225,255),3)
+    game_window = paste("travolta_arm_right.png" ,45,0, game_window, scaling = .4)
+    cv2.putText(game_window,"Do This!",(0,270),cv2.FONT_HERSHEY_PLAIN,3, (0,225,255),3)
+    game_window = paste("travolta_up_right.png" ,285,0, game_window, scaling = .4)
     # Combining the two different image frames in one window
     combined_window = np.hstack([flip,game_window])
     
-    # Displaying the single window
-    #cv2.imshow("Combined videos ",combined_window)
+    cv2.imshow(window_name, combined_window)
 
-    cv2.imshow("dance dance Evolution", combined_window)
+    if keyboard.is_pressed('space'):
+        playing = False
+        cv2.destroyAllWindows()
+        exit()
+        
 
     cv2.waitKey(1)
