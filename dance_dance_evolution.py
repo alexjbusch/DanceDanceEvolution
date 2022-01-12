@@ -31,10 +31,10 @@ mpPose = mp.solutions.pose
 pose = mpPose.Pose()
 mpDraw = mp.solutions.drawing_utils
 
-circle_spec = mpDraw.DrawingSpec(thickness=3, color=(0,0,200))
-line_spec = mpDraw.DrawingSpec(thickness=1, color=(255,0,200))
+black_circle_spec = mpDraw.DrawingSpec(thickness=5, color=(0,0,0))
 black_line_spec = mpDraw.DrawingSpec(thickness=1, color=(0,0,0))
-black_circle_spec = mpDraw.DrawingSpec(thickness=7, color=(0,0,0))
+green_line_spec = mpDraw.DrawingSpec(thickness=2, color=(0,255,0))
+green_circle_spec = mpDraw.DrawingSpec(thickness=8, color=(0,255,0))
 
 window_name = "dance dance Evolution"
 cv2.namedWindow(window_name,cv2.WND_PROP_FULLSCREEN)
@@ -405,10 +405,10 @@ while playing:
 
         #if YMCA[index].check():
         if disco_right_arm_extended.check():
-            mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, black_circle_spec, black_line_spec)
+            mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, green_line_spec, green_line_spec)
             index += 1
         else:
-            mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, circle_spec, line_spec)
+            mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, black_circle_spec, black_line_spec)
         #print(points.landmark[BodyPoint.LEFT_SHOULDER])
         
         p1 = get_BodyPoint_pos(BodyPoint.LEFT_SHOULDER)
