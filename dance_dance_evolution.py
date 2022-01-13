@@ -12,7 +12,7 @@ import keyboard
 
 """ TODO:
             get minimum viable product working
-                cycle poses/pictures
+                make Dance a class
                 music
                 present line
                 moving circles
@@ -111,9 +111,12 @@ class BodyPoint(IntEnum):
     
 """
 class Pose:
-    def __init__(self, subPoses):
+    def __init__(self, img_path:str, subPoses):
+        # the path pointing to an image of the pose
+        self.img_path = img_path
         # a list of subPose objects
         self.subPoses = subPoses
+
 
     # checks if the player is making the pose
     def check(self):
@@ -301,7 +304,8 @@ def paste(filename:str, x:int, y:int, game_window, scaling = 1):
 
 
 ### pose instantiation and definition ###
-Y = Pose([
+Y = Pose("",
+    [
     # left arm straight
     SubPose(BodyPoint.LEFT_WRIST, BodyPoint.LEFT_ELBOW,  BodyPoint.LEFT_SHOULDER, angle = 360, lower_angle_threshold = 30, upper_angle_threshold = 30),
     # right arm straight
@@ -314,7 +318,8 @@ Y = Pose([
 
     ])
 
-M = Pose([
+M = Pose("",
+    [
      #right elbow raised
      SubPose(BodyPoint.RIGHT_ELBOW, BodyPoint.RIGHT_SHOULDER,  BodyPoint.RIGHT_HIP, angle = 360, lower_angle_threshold = 75, upper_angle_threshold = 60),
      #left elbow raised
@@ -328,7 +333,8 @@ M = Pose([
     ])
 
 
-C = Pose([
+C = Pose("",
+    [
     # left wrist below right wrist
     SubPose(BodyPoint.LEFT_WRIST, BodyPoint.RIGHT_WRIST,  distance = 0, relative_position = "below"),
     # right wrist left of right shoulder
@@ -342,14 +348,16 @@ C = Pose([
 YMCA = [Y,M,C,M]
 
 
-disco_pointing_down_left = Pose([
+disco_pointing_down_left = Pose("",
+    [
     # right wrist below left shoulder
     SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.LEFT_SHOULDER,  distance = 0, relative_position = "below"),
     #
     SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.NOSE,  distance = 0, relative_position = "left_of"),
     ])
 
-disco_pointing_up_right = Pose([
+disco_pointing_up_right = Pose("travolta_up_right.png",
+    [
     # right wrist below left shoulder
     SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.NOSE,  distance = 0, relative_position = "above"),
     # right wrist right of right shoulder
@@ -360,7 +368,8 @@ disco_pointing_up_right = Pose([
     SubPose(BodyPoint.LEFT_WRIST, BodyPoint.LEFT_ELBOW, BodyPoint.LEFT_SHOULDER, angle = 45, lower_angle_threshold = 20, upper_angle_threshold = 75),
     ])
 
-disco_pointing_up_left = Pose([
+disco_pointing_up_left = Pose("travolta_up_left.png",
+    [
     # left wrist below left shoulder
     SubPose(BodyPoint.LEFT_WRIST, BodyPoint.NOSE,  distance = 0, relative_position = "above"),
     # left wrist left of left shoulder
@@ -371,7 +380,8 @@ disco_pointing_up_left = Pose([
     SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.RIGHT_ELBOW, BodyPoint.RIGHT_SHOULDER, angle = 270, lower_angle_threshold = 20, upper_angle_threshold = 75),
     ])
 
-disco_right_arm_extended = Pose([
+disco_right_arm_extended = Pose("travolta_arm_right.png",
+    [
     # right wrist below nose
     SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.NOSE,  distance = 0, relative_position = "below"),
     SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.RIGHT_HIP,  distance = 0, relative_position = "above"),
@@ -382,41 +392,42 @@ disco_right_arm_extended = Pose([
 
     ])
 
+you_should_be_dancing = [disco_pointing_up_right,
+                         disco_pointing_up_left,
+                         disco_right_arm_extended]
+
+
 ### main game loop ###
 
 playing = True
 index = 0
 counter = 0
 
+pose_index = 0
+
+current_dance = you_should_be_dancing
         
 while playing:
     success, img = cap.read()
     #imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     flip = cv2.flip(img,1)
 
-
-    
     results = pose.process(flip)
     points = results.pose_landmarks
-
-    
     
     if points:
 
         #if YMCA[index].check():
-        if disco_right_arm_extended.check():
+        if current_dance[pose_index].check():
             mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, green_line_spec, green_line_spec)
-            index += 1
+            if pose_index < len(current_dance) -1:
+                pose_index += 1
+            else:
+                pose_index = 0
+                
         else:
             mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, black_circle_spec, black_line_spec)
-        #print(points.landmark[BodyPoint.LEFT_SHOULDER])
-        
-        p1 = get_BodyPoint_pos(BodyPoint.LEFT_SHOULDER)
-        p2 = get_BodyPoint_pos(BodyPoint.LEFT_ELBOW)
-        p3 = get_BodyPoint_pos(BodyPoint.LEFT_WRIST)
 
-        #print(get_angle((p1,p2),(p2,p3)))
-        #cv2.line(flip, p1,p2, (255,100,100),2)
 
     # this is where framerate is calculated
     cTime = time.time()
@@ -431,11 +442,22 @@ while playing:
     game_window = np.zeros((len(flip),len(flip[0]),3), np.uint8)
     game_window.fill(255)
 
+
+    blank_window = np.zeros((len(flip),len(flip[0]),3), np.uint8)
+    blank_window.fill(255)
+
+    current_pose = current_dance[pose_index]
+    if pose_index == len(current_dance) - 1:
+        next_pose = current_dance[0]
+    else:
+        next_pose = current_dance[pose_index+1]
+    
+    
     # paste the image of john travolta on the game window
     cv2.putText(game_window,"Coming next!",(0,35),cv2.FONT_HERSHEY_PLAIN,3, (0,225,255),3)
-    game_window = paste("travolta_arm_right.png" ,45,0, game_window, scaling = .4)
+    game_window = paste(next_pose.img_path ,45,0, game_window, scaling = .4)
     cv2.putText(game_window,"Do This!",(0,270),cv2.FONT_HERSHEY_PLAIN,3, (0,225,255),3)
-    game_window = paste("travolta_up_right.png" ,285,0, game_window, scaling = .4)
+    game_window = paste(current_pose.img_path ,285,0, game_window, scaling = .4)
     # Combining the two different image frames in one window
     combined_window = np.hstack([flip,game_window])
     
