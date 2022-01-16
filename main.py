@@ -24,6 +24,9 @@ import keyboard
 ### global declarations ###
 cap = cv2.VideoCapture(0)
 
+green = [0, 255, 0]
+blue = [255, 0, 0]
+red = [0, 0, 255]
 # note: mp.solutions.pose.Pose is a different class than my class called Pose
 mpPose = mp.solutions.pose
 pose = mpPose.Pose()
@@ -49,6 +52,11 @@ points = None
 
 ### classes and enums ###
 
+move_colors = [
+    [0, 0, 255],
+    [255, 0, 0],
+    [0, 255, 0]
+]
 class BodyPoint(IntEnum):
     # NOTE: ALL OF THE POSITIONS ARE FLIPPED BECAUSE THE IMAGE WILL BE FLIPPED
     NOSE = 0
@@ -144,20 +152,24 @@ class Dance:
         # put the framerate on the screen
         cv2.putText(flip,str(fps),(10,70),cv2.FONT_HERSHEY_PLAIN,3, (255,0,255),3)
         cv2.putText(flip,str(self.score),(10,170),cv2.FONT_HERSHEY_PLAIN,3, (255,0,255),3)
+
         
+            
 
         # make a game window as a white screen the same size as flip
         game_window = np.zeros((len(flip),len(flip[0]),3), np.uint8)
         game_window.fill(255)
 
-
-        blank_window = np.zeros((len(flip),len(flip[0]),3), np.uint8)
-        blank_window.fill(255)
+        game_window[0:, 0:, :] = move_colors[self.pose_index]
     
         cv2.putText(game_window,"Coming next!",(0,35),cv2.FONT_HERSHEY_PLAIN,3, (0,225,255),3)
-        game_window = paste(next_pose.img_path ,45,0, game_window, scaling = .4)
+        #game_window = paste(next_pose.img_path ,45,0, game_window, scaling = .4)
         cv2.putText(game_window,"Do This!",(0,270),cv2.FONT_HERSHEY_PLAIN,3, (0,225,255),3)
-        game_window = paste(current_pose.img_path ,285,0, game_window, scaling = .4)
+        #game_window = paste(current_pose.img_path ,285,0, game_window, scaling = .4)
+
+        if (1.05 - self.score/10) > .1:
+            game_window = paste(current_pose.img_path ,0,0, game_window, scaling = 1.05 - self.score/10)
+        
         # Combining the two different image frames in one window
         combined_window = np.hstack([flip,game_window])
         
@@ -351,7 +363,6 @@ def draw_line_between_landmarks(bodyPoint1, bodyPoint2):
 
 def paste(filename:str, x:int, y:int, game_window, scaling = 1):
     sprite = cv2.imread(filename)
-
 
     width = int(sprite.shape[1] * scaling)
     height = int(sprite.shape[0] * scaling)
