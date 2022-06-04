@@ -25,7 +25,7 @@ import keyboard
 cap = cv2.VideoCapture(0)
 
 green = [0, 255, 0]
-blue = [255, 0, 0]
+blue = [230, 216, 173]
 red = [0, 0, 255]
 # note: mp.solutions.pose.Pose is a different class than my class called Pose
 mpPose = mp.solutions.pose
@@ -53,9 +53,9 @@ points = None
 ### classes and enums ###
 
 move_colors = [
-    [0, 0, 255],
-    [255, 0, 0],
-    [0, 255, 0]
+    red,
+    blue,
+    green
 ]
 class BodyPoint(IntEnum):
     # NOTE: ALL OF THE POSITIONS ARE FLIPPED BECAUSE THE IMAGE WILL BE FLIPPED
