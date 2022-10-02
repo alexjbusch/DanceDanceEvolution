@@ -1,5 +1,5 @@
 import cv2
-import mediapipe as mp
+
 import time
 from enum import IntEnum
 import numpy as np
@@ -7,7 +7,7 @@ import math
 import keyboard
 
 
-
+import mediapipe as mp
 
 
 """ TODO:
@@ -160,18 +160,23 @@ class Dance:
         game_window = np.zeros((len(flip),len(flip[0]),3), np.uint8)
         game_window.fill(255)
 
-        game_window[0:, 0:, :] = move_colors[self.pose_index]
+        #game_window[0:, 0:, :] = move_colors[self.pose_index]
     
-        cv2.putText(game_window,"Coming next!",(0,35),cv2.FONT_HERSHEY_PLAIN,3, (0,225,255),3)
+        #cv2.putText(game_window,"Coming next!",(0,35),cv2.FONT_HERSHEY_PLAIN,3, (0,225,255),3)
         #game_window = paste(next_pose.img_path ,45,0, game_window, scaling = .4)
-        cv2.putText(game_window,"Do This!",(0,270),cv2.FONT_HERSHEY_PLAIN,3, (0,225,255),3)
-        #game_window = paste(current_pose.img_path ,285,0, game_window, scaling = .4)
+        #cv2.putText(game_window,"Do This!",(0,270),cv2.FONT_HERSHEY_PLAIN,3, (0,225,255),3)
+        current_pose.x -= 1
+        game_window = paste(current_pose.img_path ,current_pose.x ,current_pose.y, game_window, scalingx = .3, scalingy = .7)
 
+
+        # code that scales an image down inversely proportional to your score
+        """
         if (1.05 - self.score/10) > .1:
             game_window = paste(current_pose.img_path ,0,0, game_window, scaling = 1.05 - self.score/10)
+        """
         
         # Combining the two different image frames in one window
-        combined_window = np.hstack([flip,game_window])
+        combined_window = np.vstack([game_window,flip])
         
         cv2.imshow(window_name, combined_window)
 
@@ -192,6 +197,8 @@ class Pose:
         # a list of subPose objects
         self.subPoses = subPoses
 
+        self.x = 700
+        self.y = 0
 
     # checks if the player is making the pose
     def check(self):
@@ -361,18 +368,26 @@ def draw_line_between_landmarks(bodyPoint1, bodyPoint2):
 
 
 
-def paste(filename:str, x:int, y:int, game_window, scaling = 1):
+def paste(filename:str, x:int, y:int, game_window, scalingx = 1, scalingy = 1):
+    if x > len(game_window) or y > len(game_window[0]):
+        return game_window
+    
     sprite = cv2.imread(filename)
 
-    width = int(sprite.shape[1] * scaling)
-    height = int(sprite.shape[0] * scaling)
+    width = int(sprite.shape[1] * scalingx)
+    height = int(sprite.shape[0] * scalingy)
     dim = (width, height)
       
     # resize image
     sprite = cv2.resize(sprite, dim, interpolation = cv2.INTER_AREA)
 
     output_image = game_window.copy()
-    output_image[x:x+len(sprite),y:y+len(sprite[0]),:] = sprite
+
+    if x+len(sprite[0]) <= len(output_image[0]):
+        output_image[y:y+len(sprite),x:x+len(sprite[0]),:] = sprite
+    else:
+        image_difference = abs(len(output_image[0]) - x+len(sprite[0]))
+        output_image[x:len(output_image),y:y+len(output_image[0]),:] = sprite[0:,0:,:]
     return output_image
 
 
@@ -478,7 +493,7 @@ you_should_be_dancing = Dance("You Should Be Dancing", "",
 playing = True
 
 current_dance = you_should_be_dancing
-        
+print("Loop started")
 while playing:
     success, img = cap.read()
     #imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
