@@ -106,13 +106,20 @@ class BodyPoint(IntEnum):
 
 
 class Dance:
-    def __init__(self, name:str, song_path:str, poses:list):
+    def __init__(self, name:str, song_path:str, poses:list, speed=150):
         self.name = name
         self.song_path = song_path
         self.poses = poses
-        
 
-        self.pose_index = 1
+        self.pose_queue = []
+
+        self.current_pose = self.poses[0][0]
+        self.current_pose_index = 0
+
+        # measured in pixels per second
+        self.speed = speed
+        self.start_time = time.time()
+        
         self.score = 0
         
         # used to calculate framerate
@@ -121,29 +128,36 @@ class Dance:
         
     def play_song(self):
         pass
+
+    def pose_was_failed(self):
+        current_time = time.time() - self.start_time
+        time_to_do_current_pose = self.poses[self.current_pose_index][1]
+        if time_to_do_current_pose - current_time <= 0:
+            self.current_pose_index += 1
+            if self.current_pose_index > len(self.poses)-1:
+                self.current_pose_index = 0
+                self.start_time = time.time()
+            self.current_pose = self.poses[self.current_pose_index][0]
+            return True
+        return False
+    
     def check_poses(self):
         # if the player is doing the curret pose correctly
-        if self.poses[self.pose_index].check():
-            # lines and circles turn green
-            mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, green_line_spec, green_line_spec)
-            self.score += 1
-            if self.pose_index < len(self.poses) -1:
-                self.pose_index += 1
-            else:
-                self.pose_index = 0
+        if self.current_pose:
+            if self.current_pose.check():
+                # lines and circles turn green
+                mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, green_line_spec, green_line_spec)
+                self.score += 1
 
-        # if the player is not doing the current pose correctly     
-        else:
-            # lines and circles are black
-            mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, black_circle_spec, black_line_spec)
+            # if the player is not doing the current pose correctly     
+            else:
+                # lines and circles are black
+                mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, black_circle_spec, black_line_spec)
             
     def handle_game_window(self):
-        current_pose = self.poses[self.pose_index]
-        if self.pose_index == len(self.poses) - 1:
-            next_pose = self.poses[0]
-        else:
-            next_pose = self.poses[self.pose_index+1]
 
+ 
+        
         # this is where framerate is calculated
         self.cTime = time.time()
         fps = 1/(self.cTime-self.pTime)
@@ -151,34 +165,30 @@ class Dance:
 
         # put the framerate on the screen
         cv2.putText(flip,str(fps),(10,70),cv2.FONT_HERSHEY_PLAIN,3, (255,0,255),3)
-        cv2.putText(flip,str(self.score),(10,170),cv2.FONT_HERSHEY_PLAIN,3, (255,0,255),3)
-
-        
-            
+        #cv2.putText(flip,str(self.score),(10,170),cv2.FONT_HERSHEY_PLAIN,3, (255,0,255),3)            
 
         # make a game window as a white screen the same size as flip
         game_window = np.zeros((len(flip),len(flip[0]),3), np.uint8)
         game_window.fill(255)
 
-        #game_window[0:, 0:, :] = move_colors[self.pose_index]
-    
-        #cv2.putText(game_window,"Coming next!",(0,35),cv2.FONT_HERSHEY_PLAIN,3, (0,225,255),3)
-        #game_window = paste(next_pose.img_path ,45,0, game_window, scaling = .4)
-        #cv2.putText(game_window,"Do This!",(0,270),cv2.FONT_HERSHEY_PLAIN,3, (0,225,255),3)
-        current_pose.x -= 1
-        game_window = paste(current_pose.img_path ,current_pose.x ,current_pose.y, game_window, scalingx = .3, scalingy = .7)
 
+        if self.pose_was_failed():
+            cv2.putText(game_window,str("Bad!"),(10,100),cv2.FONT_HERSHEY_PLAIN,3, (255,0,0),3)
 
-        # code that scales an image down inversely proportional to your score
-        """
-        if (1.05 - self.score/10) > .1:
-            game_window = paste(current_pose.img_path ,0,0, game_window, scaling = 1.05 - self.score/10)
-        """
+        
+        current_time = time.time() - self.start_time
+        for pose,time_to_do_pose in self.poses:
+            pose.x = time_to_do_pose *self.speed - (current_time*self.speed)
+            game_window = paste(pose.img_path ,int(pose.x) ,pose.y, game_window, scalingx = .3, scalingy = .7)
+
         
         # Combining the two different image frames in one window
         combined_window = np.vstack([game_window,flip])
         
         cv2.imshow(window_name, combined_window)
+
+
+
 
 """ Poses are made up of subPoses
     subPoses is a list of SubPose objects
@@ -199,6 +209,8 @@ class Pose:
 
         self.x = 700
         self.y = 0
+
+        self.time_to_do_pose = 5
 
     # checks if the player is making the pose
     def check(self):
@@ -371,6 +383,9 @@ def draw_line_between_landmarks(bodyPoint1, bodyPoint2):
 def paste(filename:str, x:int, y:int, game_window, scalingx = 1, scalingy = 1):
     if x > len(game_window) or y > len(game_window[0]):
         return game_window
+    if x < 0 or y < 0:
+        return game_window
+
     
     sprite = cv2.imread(filename)
 
@@ -433,7 +448,7 @@ C = Pose("",
     ])
 
 
-YMCA = Dance("YMCA", "",[Y,M,C,M])
+YMCA = Dance("YMCA", "",[(Y,5),(M,10),(C,15),(M,20)])
 
 
 disco_pointing_down_left = Pose("",
@@ -481,9 +496,12 @@ disco_right_arm_extended = Pose("travolta_arm_right.png",
     ])
 
 you_should_be_dancing = Dance("You Should Be Dancing", "",
-                        [disco_pointing_up_right,
-                         disco_pointing_up_left,
-                         disco_right_arm_extended])
+                        [(disco_pointing_up_right,5),
+                         (disco_pointing_up_left,7),
+                         (disco_right_arm_extended,9),
+                         (disco_pointing_up_right,13),
+                         (disco_pointing_up_left,15),
+                         (disco_right_arm_extended,17)])
 
 
 
@@ -494,6 +512,7 @@ playing = True
 
 current_dance = you_should_be_dancing
 print("Loop started")
+
 while playing:
     success, img = cap.read()
     #imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
