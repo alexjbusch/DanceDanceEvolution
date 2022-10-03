@@ -5,7 +5,7 @@ from enum import IntEnum
 import numpy as np
 import math
 import keyboard
-
+import copy
 
 import mediapipe as mp
 
@@ -106,15 +106,17 @@ class BodyPoint(IntEnum):
 
 
 class Dance:
-    def __init__(self, name:str, song_path:str, poses:list, speed=150):
+    def __init__(self, name:str, song_path:str, poses:list, speed=300):
         self.name = name
         self.song_path = song_path
         self.poses = poses
 
-        self.pose_queue = []
+        self.original_pose_list = copy.deepcopy(poses)
 
         self.current_pose = self.poses[0][0]
-        self.current_pose_index = 0
+
+
+        #self.current_pose_index = 0
 
         # measured in pixels per second
         self.speed = speed
@@ -131,13 +133,14 @@ class Dance:
 
     def pose_was_failed(self):
         current_time = time.time() - self.start_time
-        time_to_do_current_pose = self.poses[self.current_pose_index][1]
+        time_to_do_current_pose = self.poses[0][1]
         if time_to_do_current_pose - current_time <= 0:
-            self.current_pose_index += 1
-            if self.current_pose_index > len(self.poses)-1:
-                self.current_pose_index = 0
+            self.poses.pop(0)
+            #print(self.original_pose_list)
+            if not self.poses:
+                self.poses = copy.deepcopy(self.original_pose_list)
                 self.start_time = time.time()
-            self.current_pose = self.poses[self.current_pose_index][0]
+            self.current_pose = self.poses[0][0]
             return True
         return False
     
@@ -148,6 +151,12 @@ class Dance:
                 # lines and circles turn green
                 mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, green_line_spec, green_line_spec)
                 self.score += 1
+                self.poses.pop(0)
+            #print(self.original_pose_list)
+                if not self.poses:
+                    self.poses = copy.deepcopy(self.original_pose_list)
+                    self.start_time = time.time()
+                self.current_pose = self.poses[0][0]
 
             # if the player is not doing the current pose correctly     
             else:
@@ -165,7 +174,7 @@ class Dance:
 
         # put the framerate on the screen
         cv2.putText(flip,str(fps),(10,70),cv2.FONT_HERSHEY_PLAIN,3, (255,0,255),3)
-        #cv2.putText(flip,str(self.score),(10,170),cv2.FONT_HERSHEY_PLAIN,3, (255,0,255),3)            
+        cv2.putText(flip,str(self.score),(10,170),cv2.FONT_HERSHEY_PLAIN,3, (0,255,0),3)            
 
         # make a game window as a white screen the same size as flip
         game_window = np.zeros((len(flip),len(flip[0]),3), np.uint8)
@@ -173,7 +182,7 @@ class Dance:
 
 
         if self.pose_was_failed():
-            cv2.putText(game_window,str("Bad!"),(10,100),cv2.FONT_HERSHEY_PLAIN,3, (255,0,0),3)
+            cv2.putText(game_window,str("Bad!"),(10,100),cv2.FONT_HERSHEY_PLAIN,3, (0,0,255),3)
 
         
         current_time = time.time() - self.start_time
@@ -405,7 +414,7 @@ def paste(filename:str, x:int, y:int, game_window, scalingx = 1, scalingy = 1):
         output_image[x:len(output_image),y:y+len(output_image[0]),:] = sprite[0:,0:,:]
     return output_image
 
-
+print("class defintions done")
 
 ### pose instantiation and definition ###
 Y = Pose("",
@@ -497,11 +506,11 @@ disco_right_arm_extended = Pose("travolta_arm_right.png",
 
 you_should_be_dancing = Dance("You Should Be Dancing", "",
                         [(disco_pointing_up_right,5),
-                         (disco_pointing_up_left,7),
-                         (disco_right_arm_extended,9),
-                         (disco_pointing_up_right,13),
-                         (disco_pointing_up_left,15),
-                         (disco_right_arm_extended,17)])
+                         (disco_pointing_up_left,6),
+                         (disco_right_arm_extended,7),
+                         (disco_pointing_up_right,9),
+                         (disco_pointing_up_left,10),
+                         (disco_right_arm_extended,11)])
 
 
 
