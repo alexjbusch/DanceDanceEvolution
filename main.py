@@ -1,14 +1,15 @@
 import cv2
-
 import time
 from enum import IntEnum
 import numpy as np
 import math
 import keyboard
 import copy
-
 import mediapipe as mp
 
+# local scripts
+from dance_dance_evolution import *
+from utils import *
 
 """ TODO:
             get minimum viable product working
@@ -24,9 +25,7 @@ import mediapipe as mp
 ### global declarations ###
 cap = cv2.VideoCapture(0)
 
-green = [0, 255, 0]
-blue = [230, 216, 173]
-red = [0, 0, 255]
+
 # note: mp.solutions.pose.Pose is a different class than my class called Pose
 mpPose = mp.solutions.pose
 pose = mpPose.Pose()
@@ -49,78 +48,6 @@ points = None
 
 
 
-
-### classes and enums ###
-
-move_colors = [
-    red,
-    blue,
-    green
-]
-class BodyPoint(IntEnum):
-    # NOTE: ALL OF THE POSITIONS ARE FLIPPED BECAUSE THE IMAGE WILL BE FLIPPED
-    NOSE = 0
-    RIGHT_EYE_INNER = 1
-    RIGHT_EYE = 2
-    RIGHT_EYE_OUTER = 3
-    LEFT_EYE_INNER = 4
-    LEFT_EYE = 5
-    LEFT_EYE_OUTER = 6
-    RIGHT_EAR = 7
-    LEFT_EAR = 8
-    MOUTH_RIGHT = 9
-    MOUTH_LEFT = 10
-
-    RIGHT_SHOULDER = 11
-    LEFT_SHOULDER = 12
-
-    RIGHT_ELBOW = 13
-    LEFT_ELBOW = 14
-
-    RIGHT_WRIST = 15
-    LEFT_WRIST = 16
-
-    RIGHT_PINKY = 17
-    LEFT_PINKY = 18
-    RIGHT_INDEX = 19
-    LEFT_INDEX = 20
-    RIGHT_THUMB = 21
-    LEFT_THUMB = 22
-
-    RIGHT_HIP = 23
-    LEFT_HIP = 24
-
-    RIGHT_KNEE = 25
-    LEFT_KNEE = 26
-
-    RIGHT_ANKLE = 27
-    LEFT_ANKLE = 28
-
-    RIGHT_HEEL = 29
-    LEFT_HEEL = 30
-
-    RIGHT_FOOT_INDEX = 31
-    LEFT_FOOT_INDEX = 32
-
-
-class Text:
-    def __init__(self, text:str, coordinates, lifetime=2, speed = 1.5, color=(0,0,0)):
-        self.text = text
-        self.x, self.y = coordinates
-        self.lifetime = lifetime
-        self.speed = speed
-        self.color = color
-        
-        self.start_time = time.time()
-        
-    def move(self):
-        self.y -= self.speed
-        # make sure pixels are int values
-        self.y = round(self.y)
-        self.x = round(self.x)
-        if time.time()-self.start_time > self.lifetime or self.y < 0:
-            return False
-        return True
 
         
 class Dance:
@@ -154,7 +81,7 @@ class Dance:
         time_to_do_current_pose = self.poses[0][1]
         if time_to_do_current_pose - current_time <= 0:
             self.poses.pop(0)
-            #print(self.original_pose_list)
+
             if not self.poses:
                 self.poses = copy.deepcopy(self.original_pose_list)
                 self.start_time = time.time()
@@ -165,7 +92,7 @@ class Dance:
     def check_poses(self):
         # if the player is doing the curret pose correctly
         if self.current_pose:
-            print(self.current_pose.x)
+
             if self.current_pose.check():
                  # lines and circles turn green
                 mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, green_line_spec, green_line_spec)
@@ -298,8 +225,8 @@ class SubPose:
 
     def check_distance(self):
         # get the screen positions of p1 and p2
-        p1 = np.array(get_BodyPoint_pos(self.p1))
-        p2 = np.array(get_BodyPoint_pos(self.p2))
+        p1 = np.array(get_BodyPoint_pos(points,flip,self.p1))
+        p2 = np.array(get_BodyPoint_pos(points,flip,self.p2))
 
         # handle unsupported operand error if one of the points is missing
         if (None in p1) or (None in p2):
@@ -313,8 +240,8 @@ class SubPose:
         return True
 
     def check_relative_position(self):
-        p1 = np.array(get_BodyPoint_pos(self.p1))
-        p2 = np.array(get_BodyPoint_pos(self.p2))
+        p1 = np.array(get_BodyPoint_pos(points,flip,self.p1))
+        p2 = np.array(get_BodyPoint_pos(points,flip,self.p2))
         if self.relative_position == "above":
             try:
                 if p1[1] < p2[1] - self.distance:
@@ -347,9 +274,9 @@ class SubPose:
     # checks whether the angle of two lines is within a given threshold of self.angle
     def check_angle(self):
         # get the screen positions of p1 and p2
-        x1 = np.array(get_BodyPoint_pos(self.p1))
-        x2 = np.array(get_BodyPoint_pos(self.p2))
-        x3 = np.array(get_BodyPoint_pos(self.p3))
+        x1 = np.array(get_BodyPoint_pos(points,flip,self.p1))
+        x2 = np.array(get_BodyPoint_pos(points,flip,self.p2))
+        x3 = np.array(get_BodyPoint_pos(points,flip,self.p3))
         # handle unsupported operand error if one of the points is missing
         if (None in x1) or (None in x2) or (None in x3):
             return False
@@ -366,9 +293,6 @@ class SubPose:
                 upper_bound -= 360
             if lower_bound < 0:
                 lower_bound += 360
-
-            #print(player_angle)
-
 
             # if the upper and lower bounds are flipped so the lower bound is higher than the upper bound
             if upper_bound < lower_bound:
@@ -388,64 +312,7 @@ class SubPose:
             return False
 
 
-### helper functions ###
 
-def dot(vA, vB):
-    return vA[0]*vB[0]+vA[1]*vB[1]
-
-def cross(a,b):
-    return math.atan2(a[0]*b[1] - a[1]*b[0], a[0]*b[0] + a[1]*b[1])
-
-def get_angle(lineA, lineB):
-    # Get nicer vector form
-    vA = [(lineA[0][0]-lineA[1][0]), (lineA[0][1]-lineA[1][1])]
-    vB = [(lineB[0][0]-lineB[1][0]), (lineB[0][1]-lineB[1][1])]
-
-    angle = cross(vA, vB)
-    ang_deg = math.degrees(angle)%360
-    return ang_deg
-
-
-def get_BodyPoint_pos(bodyPoint):
-    x1 = points.landmark[bodyPoint].x
-    y1 = points.landmark[bodyPoint].y
-    image_rows, image_cols, _ = flip.shape
-    screen_coords = mpDraw._normalized_to_pixel_coordinates(x1, y1,
-                                               image_cols, image_rows)
-    return screen_coords
-
-def draw_line_between_landmarks(bodyPoint1, bodyPoint2):
-    screen_coords1 = get_BodyPoint_pos(bodyPoint1)
-    screen_coords2 = get_BodyPoint_pos(bodyPoint2)
-    # draw the line between the two landmarks
-    cv2.line(flip, screen_coords1, screen_coords2,(255,100,100),2)
-
-
-
-def paste(filename:str, x:int, y:int, game_window, scalingx = 1, scalingy = 1):
-    if x > len(game_window) or y > len(game_window[0]):
-        return game_window
-    if x < 0 or y < 0:
-        return game_window
-
-    
-    sprite = cv2.imread(filename)
-
-    width = int(sprite.shape[1] * scalingx)
-    height = int(sprite.shape[0] * scalingy)
-    dim = (width, height)
-      
-    # resize image
-    sprite = cv2.resize(sprite, dim, interpolation = cv2.INTER_AREA)
-
-    output_image = game_window.copy()
-
-    if x+len(sprite[0]) <= len(output_image[0]):
-        output_image[y:y+len(sprite),x:x+len(sprite[0]),:] = sprite
-    else:
-        image_difference = abs(len(output_image[0]) - x+len(sprite[0]))
-        output_image[x:len(output_image),y:y+len(output_image[0]),:] = sprite[0:,0:,:]
-    return output_image
 
 print("class defintions done")
 
@@ -515,13 +382,13 @@ disco_pointing_up_right = Pose("travolta_up_right.png",
 
 disco_pointing_up_left = Pose("travolta_up_left.png",
     [
-    # left wrist below left shoulder
+    # left wrist above nose
     SubPose(BodyPoint.LEFT_WRIST, BodyPoint.NOSE,  distance = 0, relative_position = "above"),
-    # left wrist left of left shoulder
+    # left wrist left of right shoulder
     SubPose(BodyPoint.LEFT_WRIST, BodyPoint.RIGHT_SHOULDER,  distance = 0, relative_position = "left_of"),
-    # left wrist below left shoulder
+    # right wrist below right shoulder
     SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.RIGHT_SHOULDER,  distance = 0, relative_position = "below"),
-    #
+    # right wrist at 270 degree angle to right shoulder
     SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.RIGHT_ELBOW, BodyPoint.RIGHT_SHOULDER, angle = 270, lower_angle_threshold = 20, upper_angle_threshold = 75),
     ])
 
@@ -548,8 +415,9 @@ you_should_be_dancing = Dance("You Should Be Dancing", "",
 
 
 
-### main game loop ###
 
+
+### main game loop ###
 playing = True
 
 current_dance = you_should_be_dancing
