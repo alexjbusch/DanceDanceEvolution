@@ -103,8 +103,26 @@ class BodyPoint(IntEnum):
     LEFT_FOOT_INDEX = 32
 
 
+class Text:
+    def __init__(self, text:str, coordinates, lifetime=2, speed = 1.5, color=(0,0,0)):
+        self.text = text
+        self.x, self.y = coordinates
+        self.lifetime = lifetime
+        self.speed = speed
+        self.color = color
+        
+        self.start_time = time.time()
+        
+    def move(self):
+        self.y -= self.speed
+        # make sure pixels are int values
+        self.y = round(self.y)
+        self.x = round(self.x)
+        if time.time()-self.start_time > self.lifetime or self.y < 0:
+            return False
+        return True
 
-
+        
 class Dance:
     def __init__(self, name:str, song_path:str, poses:list, speed=300):
         self.name = name
@@ -115,8 +133,8 @@ class Dance:
 
         self.current_pose = self.poses[0][0]
 
-
-        #self.current_pose_index = 0
+        # a list of Text objects
+        self.text_list = []
 
         # measured in pixels per second
         self.speed = speed
@@ -147,15 +165,22 @@ class Dance:
     def check_poses(self):
         # if the player is doing the curret pose correctly
         if self.current_pose:
+            print(self.current_pose.x)
             if self.current_pose.check():
-                # lines and circles turn green
+                 # lines and circles turn green
                 mpDraw.draw_landmarks(flip, points, mpPose.POSE_CONNECTIONS, green_line_spec, green_line_spec)
                 self.score += 1
                 self.poses.pop(0)
-            #print(self.original_pose_list)
+
+                
+                good_text = Text("Good!",(int(self.current_pose.x),200),color=(0,255,0))
+                self.text_list.append(good_text)
+                
+                # loops the dance infinitely
                 if not self.poses:
                     self.poses = copy.deepcopy(self.original_pose_list)
                     self.start_time = time.time()
+                    
                 self.current_pose = self.poses[0][0]
 
             # if the player is not doing the current pose correctly     
@@ -182,15 +207,23 @@ class Dance:
 
 
         if self.pose_was_failed():
-            cv2.putText(game_window,str("Bad!"),(10,100),cv2.FONT_HERSHEY_PLAIN,3, (0,0,255),3)
+            bad_text = Text("Bad!",(20,200),color=(0,0,255))
+            self.text_list.append(bad_text)
+
+        for text in self.text_list:
+            if text.move():
+                cv2.putText(game_window, text.text, (text.x,text.y),cv2.FONT_HERSHEY_PLAIN,3, text.color,3)
+            else:
+                self.text_list.remove(text)
+
 
         
         current_time = time.time() - self.start_time
         for pose,time_to_do_pose in self.poses:
             pose.x = time_to_do_pose *self.speed - (current_time*self.speed)
             game_window = paste(pose.img_path ,int(pose.x) ,pose.y, game_window, scalingx = .3, scalingy = .7)
+            
 
-        
         # Combining the two different image frames in one window
         combined_window = np.vstack([game_window,flip])
         
@@ -508,9 +541,9 @@ you_should_be_dancing = Dance("You Should Be Dancing", "",
                         [(disco_pointing_up_right,5),
                          (disco_pointing_up_left,6),
                          (disco_right_arm_extended,7),
-                         (disco_pointing_up_right,9),
-                         (disco_pointing_up_left,10),
-                         (disco_right_arm_extended,11)])
+                         (copy.deepcopy(disco_pointing_up_right),9),
+                        (copy.deepcopy(disco_pointing_up_left),10),
+                        (copy.deepcopy(disco_right_arm_extended),11)])
 
 
 
