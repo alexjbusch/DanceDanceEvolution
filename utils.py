@@ -107,9 +107,10 @@ def paste(filename:str, x:int, y:int, game_window, scalingx = 1, scalingy = 1):
         return game_window
     if x < 0 or y < 0:
         return game_window
-
     
     sprite = cv2.imread(filename)
+
+    sprite = cv2.resize(sprite, dsize=(444, 444), interpolation=cv2.INTER_CUBIC)
 
     width = int(sprite.shape[1] * scalingx)
     height = int(sprite.shape[0] * scalingy)
@@ -126,3 +127,5 @@ def paste(filename:str, x:int, y:int, game_window, scalingx = 1, scalingy = 1):
         image_difference = abs(len(output_image[0]) - x+len(sprite[0]))
         output_image[x:len(output_image),y:y+len(output_image[0]),:] = sprite[0:,0:,:]
     return output_image
+
+

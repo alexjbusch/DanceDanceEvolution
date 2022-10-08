@@ -138,14 +138,53 @@ you_should_be_dancing = Dance("You Should Be Dancing", "",
                         (copy.deepcopy(disco_right_arm_extended),11)])
 
 
+import json
 
+def make_new_pose(file_path):
+    f = open(file_path+".json")
+    data = json.load(f)
+    f.close()
 
+    points_of_comparison, angles = data
+
+    new_pose = Pose(file_path+".png",
+        [
+        SubPose(BodyPoint.LEFT_WRIST, BodyPoint.LEFT_ELBOW, BodyPoint.LEFT_SHOULDER, angle = angles["left_forearm_angle"]
+                , lower_angle_threshold = 20, upper_angle_threshold = 75),
+        SubPose(BodyPoint.LEFT_ELBOW, BodyPoint.LEFT_SHOULDER, BodyPoint.LEFT_HIP, angle = angles["left_arm_angle"]
+                , lower_angle_threshold = 20, upper_angle_threshold = 75),
+        SubPose(BodyPoint.RIGHT_WRIST, BodyPoint.RIGHT_ELBOW, BodyPoint.RIGHT_SHOULDER, angle = angles["right_forearm_angle"]
+                , lower_angle_threshold = 20, upper_angle_threshold = 75),
+        SubPose(BodyPoint.RIGHT_ELBOW, BodyPoint.RIGHT_SHOULDER, BodyPoint.RIGHT_HIP, angle = angles["right_arm_angle"]
+                , lower_angle_threshold = 20, upper_angle_threshold = 75),
+        
+        ])
+    return new_pose
+
+new_pose_1 = make_new_pose('custom_pose_1')
+new_pose_2 = make_new_pose('custom_pose_2')
+new_pose_3 = make_new_pose('custom_pose_3')
+
+new_dance = Dance("new dance", "",
+                  [(new_pose_1, 5),
+                  (new_pose_2,6),
+                  (new_pose_3,7),
+
+                   copy.deepcopy((new_pose_3,9)),
+                    copy.deepcopy((new_pose_2,10)),
+                    copy.deepcopy((new_pose_1,11)),
+
+                   copy.deepcopy((new_pose_1,13)),
+                    copy.deepcopy((new_pose_3,14)),
+                    copy.deepcopy((new_pose_2,15)),
+                  ])
 
 
 ### main game loop ###
 playing = True
 
 current_dance = you_should_be_dancing
+current_dance = new_dance
 print("Loop started")
 
 while playing:
@@ -170,3 +209,4 @@ while playing:
         exit()
 
     cv2.waitKey(1)
+
